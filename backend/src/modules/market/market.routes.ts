@@ -14,6 +14,10 @@ const marketQuerySchema = z.object({
 });
 
 export const marketRoutes: FastifyPluginAsync = async (app) => {
+  app.get("/pairs", { preHandler: app.authenticate }, async () => ({
+    pairs: bybitClient.listConfiguredPairs()
+  }));
+
   app.get("/", { preHandler: app.authenticate }, async (request, reply) => {
     const parsed = marketQuerySchema.safeParse(request.query);
     if (!parsed.success) {
@@ -26,7 +30,8 @@ export const marketRoutes: FastifyPluginAsync = async (app) => {
         symbol: ticker.symbol,
         price: ticker.price,
         volume: ticker.volume,
-        volatility: ticker.volatility
+        volatility: ticker.volatility,
+        changePercent: ticker.changePercent
       }
     });
 
@@ -35,9 +40,10 @@ export const marketRoutes: FastifyPluginAsync = async (app) => {
         symbol: snapshot.symbol,
         price: snapshot.price,
         volume: snapshot.volume,
+        changePercent: snapshot.changePercent,
         volatility: snapshot.volatility,
         source: snapshot.source,
-        createdAt: snapshot.createdAt
+        timestamp: snapshot.createdAt
       }
     };
   });

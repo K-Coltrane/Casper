@@ -19,4 +19,7 @@ export type RiskJobData = {
 
 export type ExecutionJobData = RiskJobData & {
   quantity: number;
+  strategy: string;
+  stopLossPrice: number;
+  idempotencyKey: string;
 };

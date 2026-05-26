@@ -22,13 +22,16 @@ model User {
 }
 
 model Portfolio {
-  id        String   @id @default(cuid())
-  userId    String   @unique
-  balance   Float    @default(0)
-  pnlToday  Float    @default(0)
-  totalPnL  Float    @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  balance           Float    @default(0)
+  pnlToday          Float    @default(0)
+  totalPnL          Float    @default(0)
+  realizedPnL       Float    @default(0)
+  unrealizedPnL     Float    @default(0)
+  openPositionValue Float    @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -36,17 +39,23 @@ model Portfolio {
 }
 
 model Trade {
-  id         String    @id @default(cuid())
-  userId     String
-  symbol     String
-  side       String
-  entryPrice Float
-  exitPrice  Float?
-  quantity   Float
-  pnl        Float?
-  status     String
-  createdAt  DateTime  @default(now())
-  closedAt   DateTime?
+  id              String    @id @default(cuid())
+  userId          String
+  symbol          String
+  side            String
+  entryPrice      Float
+  exitPrice       Float?
+  quantity        Float
+  pnl             Float?
+  status          String
+  strategy        String    @default("balanced")
+  idempotencyKey  String?   @unique
+  exchangeOrderId String?
+  stopLossPrice   Float?
+  failureReason   String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  closedAt        DateTime?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -81,6 +90,10 @@ model Settings {
   botEnabled         Boolean  @default(false)
   maxTradesPerDay    Int      @default(5)
   maxDrawdownPercent Float    @default(10)
+  maxOpenTrades      Int      @default(3)
+  maxExposurePercent Float    @default(0.5)
+  tradeCooldownSecs  Int      @default(60)
+  stopLossPercent    Float    @default(2)
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
@@ -90,13 +103,14 @@ model Settings {
 }
 
 model MarketSnapshot {
-  id         String   @id @default(cuid())
-  symbol     String
-  price      Float
-  volume     Float
-  volatility Float
-  source     String   @default("BYBIT")
-  createdAt  DateTime @default(now())
+  id            String   @id @default(cuid())
+  symbol        String
+  price         Float
+  volume        Float
+  volatility    Float
+  changePercent Float    @default(0)
+  source        String   @default("BYBIT")
+  createdAt     DateTime @default(now())
 
   @@index([symbol, createdAt])
   @@map("market_snapshots")

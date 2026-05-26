@@ -10,7 +10,11 @@ const updateSettingsSchema = z.object({
   memeCoins: z.boolean().optional(),
   botEnabled: z.boolean().optional(),
   maxTradesPerDay: z.number().int().positive().max(100).optional(),
-  maxDrawdownPercent: z.number().positive().max(100).optional()
+  maxDrawdownPercent: z.number().positive().max(100).optional(),
+  maxOpenTrades: z.number().int().positive().max(100).optional(),
+  maxExposurePercent: z.number().positive().max(1).optional(),
+  tradeCooldownSecs: z.number().int().min(0).max(86_400).optional(),
+  stopLossPercent: z.number().positive().max(100).optional()
 });
 
 export const settingsRoutes: FastifyPluginAsync = async (app) => {

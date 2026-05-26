@@ -20,7 +20,9 @@ const envSchema = z.object({
   JWT_REFRESH_TTL: z.string().default("30d"),
   API_KEY_ENCRYPTION_SECRET: z.string().min(32),
   BYBIT_BASE_URL: z.string().url().default("https://api-testnet.bybit.com"),
-  BYBIT_ENABLE_LIVE_TRADING: boolFromString
+  BYBIT_ENABLE_LIVE_TRADING: boolFromString,
+  MARKET_DATA_MODE: z.enum(["mock", "bybit"]).default("mock"),
+  TRADING_PAIRS: z.string().default("BTCUSDT,ETHUSDT,SOLUSDT")
 });
 
 export const env = envSchema.parse(process.env);

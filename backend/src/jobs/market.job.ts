@@ -39,7 +39,8 @@ export function createMarketWorker(
           symbol: marketData.symbol,
           price: marketData.price,
           volume: marketData.volume,
-          volatility: marketData.volatility
+          volatility: marketData.volatility,
+          changePercent: marketData.changePercent
         }
       });
 

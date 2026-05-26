@@ -1,6 +1,6 @@
 import { Worker, type Queue } from "bullmq";
 import type { PrismaClient } from "@prisma/client";
-import { riskCheck } from "../engine/risk.engine.js";
+import { calculateStopLossPrice, riskCheck } from "../engine/risk.engine.js";
 import type { RedisConnection } from "../infrastructure/redis/client.js";
 import { queueNames } from "./queues.js";
 import type { ExecutionJobData, RiskJobData } from "./job.types.js";
@@ -19,7 +19,7 @@ export function createRiskWorker(
   return new Worker<RiskJobData>(
     queueNames.risk,
     async (job) => {
-      const [settings, portfolio, tradesToday, openTrades] = await Promise.all([
+      const [settings, portfolio, tradesToday, openTrades, lastTrade] = await Promise.all([
         prisma.settings.findUnique({ where: { userId: job.data.userId } }),
         prisma.portfolio.findUnique({ where: { userId: job.data.userId } }),
         prisma.trade.count({
@@ -37,6 +37,11 @@ export function createRiskWorker(
             entryPrice: true,
             quantity: true
           }
+        }),
+        prisma.trade.findFirst({
+          where: { userId: job.data.userId },
+          orderBy: { createdAt: "desc" },
+          select: { createdAt: true }
         })
       ]);
 
@@ -57,7 +62,8 @@ export function createRiskWorker(
         settings,
         portfolio,
         tradesToday,
-        openTrades
+        openTrades,
+        lastTrade: lastTrade ?? undefined
       });
 
       if (!result.allowed) {
@@ -66,7 +72,14 @@ export function createRiskWorker(
 
       await executionQueue.add("execute-trade", {
         ...job.data,
-        quantity
+        quantity,
+        strategy: settings.strategy,
+        stopLossPrice: calculateStopLossPrice(
+          job.data.signal,
+          job.data.marketData.price,
+          settings.stopLossPercent
+        ),
+        idempotencyKey: `${job.data.userId}:${job.data.marketData.symbol}:${job.data.signal}:${job.id}`
       });
 
       return { allowed: true, quantity };

@@ -9,7 +9,9 @@ const createTradeSchema = z.object({
   quantity: z.number().positive(),
   status: z.enum(["OPEN", "CLOSED"]).default("OPEN"),
   exitPrice: z.number().positive().optional(),
-  pnl: z.number().optional()
+  pnl: z.number().optional(),
+  strategy: z.enum(["conservative", "balanced", "aggressive"]).default("balanced"),
+  stopLossPrice: z.number().positive().optional()
 });
 
 export const tradesRoutes: FastifyPluginAsync = async (app) => {
@@ -39,6 +41,8 @@ export const tradesRoutes: FastifyPluginAsync = async (app) => {
         status: parsed.data.status,
         exitPrice: parsed.data.exitPrice,
         pnl: parsed.data.pnl,
+        strategy: parsed.data.strategy,
+        stopLossPrice: parsed.data.stopLossPrice,
         closedAt: parsed.data.status === "CLOSED" ? new Date() : undefined
       }
     });

@@ -10,11 +10,13 @@ import { apiKeyRoutes } from "./modules/api-keys/api-keys.routes.js";
 import { authRoutes } from "./modules/auth/auth.routes.js";
 import { botRoutes } from "./modules/bot/bot.routes.js";
 import { marketRoutes } from "./modules/market/market.routes.js";
+import { metricsRoutes } from "./modules/observability/metrics.routes.js";
 import { portfolioRoutes } from "./modules/portfolio/portfolio.routes.js";
 import { settingsRoutes } from "./modules/settings/settings.routes.js";
 import { tradesRoutes } from "./modules/trades/trades.routes.js";
 import { usersRoutes } from "./modules/users/users.routes.js";
 import { prisma } from "./infrastructure/prisma/client.js";
+import { registerMarketStream } from "./websocket/market.stream.js";
 import { verifyAccessToken } from "./utils/jwt.js";
 
 export async function buildApp() {
@@ -58,6 +60,7 @@ export async function buildApp() {
   });
 
   app.get("/health", async () => ({ ok: true }));
+  await registerMarketStream(app);
 
   await app.register(authRoutes, { prefix: "/auth" });
   await app.register(usersRoutes, { prefix: "/users" });
@@ -67,6 +70,7 @@ export async function buildApp() {
   await app.register(settingsRoutes, { prefix: "/settings" });
   await app.register(botRoutes, { prefix: "/bot" });
   await app.register(apiKeyRoutes, { prefix: "/api-keys" });
+  await app.register(metricsRoutes);
 
   app.setErrorHandler((error: FastifyError, _request, reply) => {
     app.log.error({ err: error }, "request failed");
