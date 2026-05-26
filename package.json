@@ -5,7 +5,10 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "dev": "vite"
+    "dev": "vite",
+    "backend:build": "pnpm --filter @casper/backend build",
+    "backend:dev": "pnpm --filter @casper/backend dev",
+    "backend:worker": "pnpm --filter @casper/backend worker:dev"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",
