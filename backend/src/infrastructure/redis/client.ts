@@ -1,9 +1,11 @@
-import IORedis from "ioredis";
+import { Redis } from "ioredis";
 import { env } from "../../config/env.js";
 
 export function createRedisConnection() {
-  return new IORedis(env.REDIS_URL, {
+  return new Redis(env.REDIS_URL, {
     maxRetriesPerRequest: null,
     enableReadyCheck: false
   });
 }
+
+export type RedisConnection = ReturnType<typeof createRedisConnection>;

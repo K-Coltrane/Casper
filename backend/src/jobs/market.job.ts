@@ -1,12 +1,12 @@
 import { Worker, type Queue } from "bullmq";
-import type IORedis from "ioredis";
 import type { PrismaClient } from "@prisma/client";
 import { bybitClient } from "../infrastructure/bybit/client.js";
+import type { RedisConnection } from "../infrastructure/redis/client.js";
 import { queueNames } from "./queues.js";
 import type { MarketJobData, SignalJobData } from "./job.types.js";
 
 export function createMarketWorker(
-  connection: IORedis,
+  connection: RedisConnection,
   prisma: PrismaClient,
   signalQueue: Queue<SignalJobData>
 ) {

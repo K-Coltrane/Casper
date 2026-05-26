@@ -1,12 +1,12 @@
 import { Worker, type Queue } from "bullmq";
-import type IORedis from "ioredis";
 import type { PrismaClient } from "@prisma/client";
 import { generateSignal } from "../engine/signal.engine.js";
+import type { RedisConnection } from "../infrastructure/redis/client.js";
 import { queueNames } from "./queues.js";
 import type { RiskJobData, SignalJobData } from "./job.types.js";
 
 export function createSignalWorker(
-  connection: IORedis,
+  connection: RedisConnection,
   prisma: PrismaClient,
   riskQueue: Queue<RiskJobData>
 ) {

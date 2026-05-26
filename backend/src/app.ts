@@ -1,7 +1,7 @@
 import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
-import Fastify from "fastify";
+import Fastify, { type FastifyError, type FastifyReply, type FastifyRequest } from "fastify";
 import jwt from "jsonwebtoken";
 import { env } from "./config/env.js";
 import { loggerOptions } from "./config/logger.js";
@@ -23,7 +23,7 @@ export async function buildApp() {
 
   app.decorate("prisma", prisma);
   app.decorate("queues", queues);
-  app.decorate("authenticate", async (request, reply) => {
+  app.decorate("authenticate", async (request: FastifyRequest, reply: FastifyReply) => {
     const authorization = request.headers.authorization;
     const token = authorization?.startsWith("Bearer ") ? authorization.slice(7) : undefined;
 
@@ -68,7 +68,7 @@ export async function buildApp() {
   await app.register(botRoutes, { prefix: "/bot" });
   await app.register(apiKeyRoutes, { prefix: "/api-keys" });
 
-  app.setErrorHandler((error, _request, reply) => {
+  app.setErrorHandler((error: FastifyError, _request, reply) => {
     app.log.error({ err: error }, "request failed");
     return reply.status(error.statusCode ?? 500).send({
       message: error.statusCode && error.statusCode < 500 ? error.message : "Internal server error"

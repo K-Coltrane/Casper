@@ -1,5 +1,5 @@
 import type { Queue } from "bullmq";
-import type { FastifyRequest } from "fastify";
+import type { FastifyReply, FastifyRequest } from "fastify";
 import type { PrismaClient } from "@prisma/client";
 
 export type AuthenticatedUser = {
@@ -18,7 +18,7 @@ declare module "fastify" {
   interface FastifyInstance {
     prisma: PrismaClient;
     queues: AppQueues;
-    authenticate(request: FastifyRequest): Promise<void>;
+    authenticate(request: FastifyRequest, reply: FastifyReply): Promise<unknown>;
   }
 
   interface FastifyRequest {

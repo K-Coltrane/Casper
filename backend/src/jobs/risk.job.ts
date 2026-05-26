@@ -1,7 +1,7 @@
 import { Worker, type Queue } from "bullmq";
-import type IORedis from "ioredis";
 import type { PrismaClient } from "@prisma/client";
 import { riskCheck } from "../engine/risk.engine.js";
+import type { RedisConnection } from "../infrastructure/redis/client.js";
 import { queueNames } from "./queues.js";
 import type { ExecutionJobData, RiskJobData } from "./job.types.js";
 
@@ -12,7 +12,7 @@ function startOfUtcDay() {
 }
 
 export function createRiskWorker(
-  connection: IORedis,
+  connection: RedisConnection,
   prisma: PrismaClient,
   executionQueue: Queue<ExecutionJobData>
 ) {
