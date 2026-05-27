@@ -5,7 +5,18 @@ import Markets from './components/Markets';
 import Trades from './components/Trades';
 import Analytics from './components/Analytics';
 import Settings from './components/Settings';
-import { casperApi, getAccessToken, type BotStatus, type Market, type Portfolio, type Settings as ApiSettings, type Trade } from './lib/api';
+import {
+  casperApi,
+  getAccessToken,
+  getApiBaseUrl,
+  resetApiSession,
+  setApiBaseUrl,
+  type BotStatus,
+  type Market,
+  type Portfolio,
+  type Settings as ApiSettings,
+  type Trade
+} from './lib/api';
 import { formatCurrency } from './lib/format';
 
 type Tab = 'dashboard' | 'markets' | 'trades' | 'analytics' | 'settings';
@@ -56,6 +67,7 @@ export default function App() {
   const [botStatus, setBotStatus] = useState<BotStatus>(fallbackBotStatus);
   const [trades, setTrades] = useState<Trade[]>([]);
   const [markets, setMarkets] = useState<Market[]>([]);
+  const [apiBaseUrl, setApiBaseUrlState] = useState(getApiBaseUrl());
   const [apiStatus, setApiStatus] = useState<'connecting' | 'connected' | 'offline'>('connecting');
   const isRunning = botStatus.global.enabled && botStatus.user.botEnabled && !botStatus.global.emergencyStopped;
 
@@ -100,7 +112,7 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [refreshData]);
+  }, [apiBaseUrl, refreshData]);
 
   useEffect(() => {
     if (!token) return;
@@ -120,7 +132,7 @@ export default function App() {
     return () => {
       socket.close();
     };
-  }, [token]);
+  }, [apiBaseUrl, token]);
 
   const runBotAction = async (action: 'start' | 'stop' | 'emergency-stop') => {
     if (!token) return;
@@ -142,6 +154,19 @@ export default function App() {
     const response = await casperApi.updateSettings(token, nextSettings);
     setSettings(response.settings);
     await refreshData(token);
+  };
+
+  const updateApiBaseUrl = (nextApiBaseUrl: string) => {
+    setApiBaseUrl(nextApiBaseUrl);
+    resetApiSession();
+    setToken(undefined);
+    setPortfolio(fallbackPortfolio);
+    setSettings(fallbackSettings);
+    setBotStatus(fallbackBotStatus);
+    setTrades([]);
+    setMarkets([]);
+    setApiStatus('connecting');
+    setApiBaseUrlState(getApiBaseUrl());
   };
 
   const tabs = [
@@ -179,7 +204,9 @@ export default function App() {
             settings={settings}
             botStatus={botStatus}
             apiStatus={apiStatus}
+            apiBaseUrl={apiBaseUrl}
             onUpdate={updateSettings}
+            onApiBaseUrlChange={updateApiBaseUrl}
             onEmergencyStop={() => void runBotAction('emergency-stop')}
           />
         );

@@ -1,6 +1,7 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:4000';
+const DEFAULT_API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:4000';
 const DEMO_EMAIL = import.meta.env.VITE_DEMO_EMAIL ?? 'demo@casper.local';
 const DEMO_PASSWORD = import.meta.env.VITE_DEMO_PASSWORD ?? 'casper-demo-password';
+const API_BASE_STORAGE_KEY = 'casper.apiBaseUrl';
 const TOKEN_STORAGE_KEY = 'casper.accessToken';
 const REFRESH_STORAGE_KEY = 'casper.refreshToken';
 
@@ -77,8 +78,21 @@ type ApiOptions = {
   token?: string;
 };
 
+export function getApiBaseUrl() {
+  return localStorage.getItem(API_BASE_STORAGE_KEY) ?? DEFAULT_API_BASE_URL;
+}
+
+export function setApiBaseUrl(url: string) {
+  localStorage.setItem(API_BASE_STORAGE_KEY, url.replace(/\/$/, ''));
+}
+
+export function resetApiSession() {
+  localStorage.removeItem(TOKEN_STORAGE_KEY);
+  localStorage.removeItem(REFRESH_STORAGE_KEY);
+}
+
 async function request<T>(path: string, options: ApiOptions = {}): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const response = await fetch(`${getApiBaseUrl()}${path}`, {
     method: options.method ?? 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -177,7 +191,7 @@ export const casperApi = {
     });
   },
   marketStreamUrl(token: string, symbol: string) {
-    const wsBaseUrl = API_BASE_URL.replace(/^http/, 'ws');
+    const wsBaseUrl = getApiBaseUrl().replace(/^http/, 'ws');
     return `${wsBaseUrl}/ws/market?symbol=${encodeURIComponent(symbol)}&token=${encodeURIComponent(token)}`;
   }
 };

@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { CheckCircle, AlertTriangle } from 'lucide-react';
 import type { BotStatus, Settings as ApiSettings } from '../lib/api';
 import { formatCurrency } from '../lib/format';
@@ -6,7 +7,9 @@ type SettingsProps = {
   settings: ApiSettings;
   botStatus: BotStatus;
   apiStatus: 'connecting' | 'connected' | 'offline';
+  apiBaseUrl: string;
   onUpdate: (settings: Partial<ApiSettings>) => void | Promise<void>;
+  onApiBaseUrlChange: (apiBaseUrl: string) => void;
   onEmergencyStop: () => void;
 };
 
@@ -14,10 +17,17 @@ export default function Settings({
   settings,
   botStatus,
   apiStatus,
+  apiBaseUrl,
   onUpdate,
+  onApiBaseUrlChange,
   onEmergencyStop
 }: SettingsProps) {
   const isConnected = apiStatus === 'connected';
+  const [draftApiBaseUrl, setDraftApiBaseUrl] = useState(apiBaseUrl);
+
+  useEffect(() => {
+    setDraftApiBaseUrl(apiBaseUrl);
+  }, [apiBaseUrl]);
 
   return (
     <div className="flex-1 overflow-y-auto px-4 pb-6 space-y-4">
@@ -41,6 +51,40 @@ export default function Settings({
               <CheckCircle className="w-4 h-4" style={{ color: isConnected ? 'var(--casper-green)' : 'var(--casper-red)' }} />
             </div>
           </div>
+        </div>
+        <div
+          className="rounded-2xl p-4 space-y-3"
+          style={{ backgroundColor: 'var(--casper-bg-card)' }}
+        >
+          <div>
+            <p className="text-xs mb-2" style={{ color: 'var(--casper-text-dim)' }}>
+              Backend server URL for this phone
+            </p>
+            <input
+              value={draftApiBaseUrl}
+              onChange={(event) => setDraftApiBaseUrl(event.target.value)}
+              placeholder="https://api.yourdomain.com or http://192.168.1.25:4000"
+              className="w-full rounded-xl px-3 py-3 text-xs outline-none"
+              style={{
+                backgroundColor: 'var(--casper-bg-primary)',
+                color: 'var(--casper-text-primary)',
+                border: '1px solid var(--casper-border)'
+              }}
+            />
+          </div>
+          <button
+            onClick={() => onApiBaseUrlChange(draftApiBaseUrl)}
+            className="w-full py-3 rounded-xl font-bold text-sm"
+            style={{
+              backgroundColor: 'var(--casper-green)',
+              color: '#000'
+            }}
+          >
+            SAVE BACKEND URL
+          </button>
+          <p className="text-xs" style={{ color: 'var(--casper-text-dim)' }}>
+            For a real phone, use your hosted backend URL or your computer LAN IP, not 10.0.2.2.
+          </p>
         </div>
       </div>
 
