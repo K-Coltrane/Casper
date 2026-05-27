@@ -38,9 +38,9 @@ export default function App() {
   };
 
   return (
-    <div className="size-full flex items-center justify-center" style={{ backgroundColor: 'var(--casper-bg-primary)' }}>
+    <div className="size-full min-h-0 flex items-center justify-center" style={{ backgroundColor: 'var(--casper-bg-primary)' }}>
       {/* Mobile App Container */}
-      <div className="w-full max-w-[390px] h-full flex flex-col relative" style={{ backgroundColor: 'var(--casper-bg-primary)' }}>
+      <div className="w-full max-w-[390px] h-full min-h-0 flex flex-col relative overflow-hidden" style={{ backgroundColor: 'var(--casper-bg-primary)' }}>
         {/* iOS Status Bar */}
         <div className="h-11 flex items-center justify-between px-6 pt-2">
           <span className="text-sm font-semibold" style={{ color: 'var(--casper-text-primary)' }}>
@@ -88,7 +88,7 @@ export default function App() {
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
           {renderContent()}
         </div>
 

@@ -2,7 +2,7 @@ import { CheckCircle, AlertTriangle } from 'lucide-react';
 
 export default function Settings() {
   return (
-    <div className="flex-1 overflow-y-auto px-4 pb-6 space-y-4">
+    <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain px-4 pb-6 space-y-4">
       {/* API CONNECTION */}
       <div className="space-y-3">
         <h3 className="font-bold text-sm" style={{ color: 'var(--casper-text-primary)' }}>

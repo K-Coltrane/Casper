@@ -11,7 +11,7 @@ const marketData = [
 
 export default function Markets() {
   return (
-    <div className="flex-1 overflow-y-auto">
+    <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain">
       {/* FILTERS */}
       <div className="px-4 py-3 sticky top-0 z-10" style={{ backgroundColor: 'var(--casper-bg-primary)' }}>
         <div className="flex items-center gap-2 overflow-x-auto pb-2">
