@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
+    "build:production": "pnpm --filter @casper/backend build && vite build --mode production",
     "dev": "vite",
     "backend:build": "pnpm --filter @casper/backend build",
     "backend:dev": "pnpm --filter @casper/backend dev",

@@ -1,15 +1,12 @@
-const marketData = [
-  { pair: 'SOL/USDT', price: '$142.20', change: '+2.4%', signal: 87, positive: true },
-  { pair: 'BTC/USDT', price: '$41,100', change: '+0.9%', signal: 64, positive: true },
-  { pair: 'DOGE/USDT', price: '$0.082', change: '+5.1%', signal: 91, positive: true },
-  { pair: 'ETH/USDT', price: '$3,247', change: '+1.2%', signal: 72, positive: true },
-  { pair: 'MATIC/USDT', price: '$0.87', change: '-0.8%', signal: 58, positive: false },
-  { pair: 'AVAX/USDT', price: '$38.92', change: '+3.2%', signal: 79, positive: true },
-  { pair: 'ADA/USDT', price: '$0.58', change: '-1.4%', signal: 45, positive: false },
-  { pair: 'DOT/USDT', price: '$7.34', change: '+2.1%', signal: 66, positive: true },
-];
+import type { Market } from '../lib/api';
+import { formatCurrency, formatPair, formatPercent } from '../lib/format';
 
-export default function Markets() {
+type MarketsProps = {
+  markets: Market[];
+  apiStatus: 'connecting' | 'connected' | 'offline';
+};
+
+export default function Markets({ markets, apiStatus }: MarketsProps) {
   return (
     <div className="flex-1 overflow-y-auto">
       {/* FILTERS */}
@@ -48,9 +45,21 @@ export default function Markets() {
 
       {/* MARKET LIST */}
       <div className="px-4 space-y-2 pb-6">
-        {marketData.map((item, idx) => (
+        {markets.length === 0 && (
           <div
-            key={idx}
+            className="rounded-2xl p-4 text-sm"
+            style={{ backgroundColor: 'var(--casper-bg-card)', color: 'var(--casper-text-secondary)' }}
+          >
+            {apiStatus === 'offline' ? 'Backend offline. Start the API server to load market data.' : 'Loading market data...'}
+          </div>
+        )}
+        {markets.map((item) => {
+          const signal = Math.min(99, Math.round((1 - item.volatility) * 100));
+          const positive = item.changePercent >= 0;
+
+          return (
+            <div
+            key={item.symbol}
             className="rounded-2xl p-4 cursor-pointer transition-all hover:scale-[1.02]"
             style={{
               backgroundColor: 'var(--casper-bg-card)',
@@ -64,14 +73,17 @@ export default function Markets() {
               {/* Left: Coin Pair */}
               <div>
                 <p className="font-bold text-sm" style={{ color: 'var(--casper-text-primary)' }}>
-                  {item.pair}
+                  {formatPair(item.symbol)}
+                </p>
+                <p className="text-[10px]" style={{ color: 'var(--casper-text-dim)' }}>
+                  Vol {item.volume.toLocaleString()}
                 </p>
               </div>
 
               {/* Center: Price */}
               <div className="text-center">
                 <p className="font-bold" style={{ color: 'var(--casper-text-primary)' }}>
-                  {item.price}
+                  {formatCurrency(item.price)}
                 </p>
               </div>
 
@@ -79,23 +91,24 @@ export default function Markets() {
               <div className="text-right flex items-center gap-3">
                 <span
                   className="text-sm font-bold"
-                  style={{ color: item.positive ? 'var(--casper-green)' : 'var(--casper-red)' }}
+                  style={{ color: positive ? 'var(--casper-green)' : 'var(--casper-red)' }}
                 >
-                  {item.change}
+                  {formatPercent(item.changePercent)}
                 </span>
                 <div
                   className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs"
                   style={{
-                    backgroundColor: item.signal >= 70 ? 'var(--casper-green)' : 'var(--casper-blue)',
+                    backgroundColor: signal >= 70 ? 'var(--casper-green)' : 'var(--casper-blue)',
                     color: '#000'
                   }}
                 >
-                  ⭐{item.signal}
+                  ⭐{signal}
                 </div>
               </div>
             </div>
-          </div>
-        ))}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
