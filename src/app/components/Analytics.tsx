@@ -1,17 +1,28 @@
 import { LineChart, Line, ResponsiveContainer } from 'recharts';
+import type { Portfolio, Trade } from '../lib/api';
+import { formatCurrency } from '../lib/format';
 
-const chartData = [
-  { value: 100 },
-  { value: 105 },
-  { value: 110 },
-  { value: 108 },
-  { value: 115 },
-  { value: 120 },
-  { value: 125 },
-  { value: 128 },
-];
+type AnalyticsProps = {
+  portfolio: Portfolio;
+  trades: Trade[];
+};
 
-export default function Analytics() {
+export default function Analytics({ portfolio, trades }: AnalyticsProps) {
+  const closedTrades = trades.filter((trade) => trade.status === 'CLOSED');
+  const winningTrades = closedTrades.filter((trade) => (trade.pnl ?? 0) > 0);
+  const winRate = closedTrades.length > 0 ? Math.round((winningTrades.length / closedTrades.length) * 100) : 0;
+  const averageGain =
+    winningTrades.length > 0
+      ? winningTrades.reduce((total, trade) => total + (trade.pnl ?? 0), 0) / winningTrades.length
+      : 0;
+  const maxDrawdown = portfolio.balance > 0 ? (Math.min(portfolio.totalPnL, 0) / portfolio.balance) * 100 : 0;
+  const chartData =
+    closedTrades.length > 0
+      ? closedTrades.slice(-8).map((trade, index) => ({
+          value: closedTrades.slice(0, index + 1).reduce((total, item) => total + (item.pnl ?? 0), 0)
+        }))
+      : [{ value: 0 }, { value: portfolio.totalPnL }];
+
   return (
     <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain px-4 pb-6 space-y-4">
       {/* TIME FILTERS */}
@@ -65,10 +76,10 @@ export default function Analytics() {
             Total Profit
           </p>
           <p className="text-2xl font-bold" style={{ color: 'var(--casper-green)' }}>
-            +$128
+            {formatCurrency(portfolio.totalPnL)}
           </p>
           <p className="text-xs mt-1" style={{ color: 'var(--casper-green)' }}>
-            +87.3%
+            Realized {formatCurrency(portfolio.realizedPnL ?? 0)}
           </p>
         </div>
 
@@ -80,10 +91,10 @@ export default function Analytics() {
             Win Rate
           </p>
           <p className="text-2xl font-bold" style={{ color: 'var(--casper-text-primary)' }}>
-            71%
+            {winRate}%
           </p>
           <p className="text-xs mt-1" style={{ color: 'var(--casper-text-dim)' }}>
-            78/89 trades
+            {winningTrades.length}/{closedTrades.length} trades
           </p>
         </div>
 
@@ -95,7 +106,7 @@ export default function Analytics() {
             Avg Gain
           </p>
           <p className="text-2xl font-bold" style={{ color: 'var(--casper-green)' }}>
-            +$4.20
+            {formatCurrency(averageGain)}
           </p>
         </div>
 
@@ -107,7 +118,7 @@ export default function Analytics() {
             Max Drawdown
           </p>
           <p className="text-2xl font-bold" style={{ color: 'var(--casper-red)' }}>
-            -6.1%
+            {maxDrawdown.toFixed(1)}%
           </p>
         </div>
       </div>

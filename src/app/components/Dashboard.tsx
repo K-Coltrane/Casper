@@ -1,14 +1,39 @@
 import { Play, Square, AlertTriangle } from 'lucide-react';
+import type { Portfolio, Settings, Trade } from '../lib/api';
+import { formatCurrency } from '../lib/format';
 
-const activityFeed = [
-  { text: 'Scanning SOL/USDT...', time: '2s ago' },
-  { text: 'Signal detected BTC (strong)', time: '12s ago' },
-  { text: 'Entered ETH trade', time: '1m ago' },
-  { text: 'Monitoring exit conditions', time: '2m ago' },
-];
+type DashboardProps = {
+  isRunning: boolean;
+  portfolio: Portfolio;
+  settings: Settings;
+  trades: Trade[];
+  apiStatus: 'connecting' | 'connected' | 'offline';
+  onStart: () => void;
+  onStop: () => void;
+  onEmergencyStop: () => void;
+};
 
-export default function Dashboard() {
-  const isRunning = true;
+export default function Dashboard({
+  isRunning,
+  portfolio,
+  settings,
+  trades,
+  apiStatus,
+  onStart,
+  onStop,
+  onEmergencyStop
+}: DashboardProps) {
+  const openTrades = trades.filter((trade) => trade.status === 'OPEN');
+  const closedTrades = trades.filter((trade) => trade.status === 'CLOSED');
+  const winningTrades = closedTrades.filter((trade) => (trade.pnl ?? 0) > 0);
+  const winRate = closedTrades.length > 0 ? Math.round((winningTrades.length / closedTrades.length) * 100) : 0;
+  const targetProgress = `${formatCurrency(portfolio.pnlToday)} / ${formatCurrency(settings.dailyTarget)}`;
+  const activityFeed = [
+    { text: `Backend API ${apiStatus}`, time: 'now' },
+    { text: `${openTrades.length} open trade${openTrades.length === 1 ? '' : 's'}`, time: 'live' },
+    { text: `Strategy: ${settings.strategy}`, time: 'live' },
+    { text: `Daily risk limit ${formatCurrency(settings.dailyLossLimit)}`, time: 'live' }
+  ];
 
   return (
     <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain px-4 pb-6 space-y-4">
@@ -34,17 +59,17 @@ export default function Dashboard() {
           <div>
             <p className="text-xs mb-1" style={{ color: 'var(--casper-text-dim)' }}>Balance</p>
             <p className="text-2xl font-bold" style={{ color: 'var(--casper-text-primary)' }}>
-              $1,240.55
+              {formatCurrency(portfolio.balance)}
             </p>
           </div>
           <div className="text-right">
             <p className="text-xs mb-1" style={{ color: 'var(--casper-text-dim)' }}>Today P/L</p>
             <div>
               <span className="text-2xl font-bold" style={{ color: 'var(--casper-green)' }}>
-                +$12.40
+                {formatCurrency(portfolio.pnlToday)}
               </span>
               <span className="text-sm ml-2" style={{ color: 'var(--casper-green)' }}>
-                +1.01%
+                {portfolio.balance > 0 ? `${((portfolio.pnlToday / portfolio.balance) * 100).toFixed(2)}%` : '0.00%'}
               </span>
             </div>
           </div>
@@ -59,6 +84,7 @@ export default function Dashboard() {
         {/* START / STOP Buttons */}
         <div className="grid grid-cols-2 gap-3">
           <button
+            onClick={onStart}
             className="py-4 rounded-xl font-bold transition-all"
             style={{
               backgroundColor: 'var(--casper-green)',
@@ -69,6 +95,7 @@ export default function Dashboard() {
             <Play className="w-5 h-5 mx-auto" />
           </button>
           <button
+            onClick={onStop}
             className="py-4 rounded-xl font-bold transition-all"
             style={{
               backgroundColor: 'var(--casper-red)',
@@ -82,6 +109,7 @@ export default function Dashboard() {
 
         {/* EMERGENCY KILL SWITCH */}
         <button
+          onClick={onEmergencyStop}
           className="w-full py-4 rounded-xl font-bold flex items-center justify-center gap-2 animate-pulse"
           style={{
             backgroundColor: 'var(--casper-red)',
@@ -132,7 +160,7 @@ export default function Dashboard() {
             Daily Target
           </p>
           <p className="text-2xl font-bold" style={{ color: 'var(--casper-text-primary)' }}>
-            $10 / $10
+            {targetProgress}
           </p>
         </div>
 
@@ -144,7 +172,7 @@ export default function Dashboard() {
             Win Rate
           </p>
           <p className="text-2xl font-bold" style={{ color: 'var(--casper-green)' }}>
-            72%
+            {winRate}%
           </p>
         </div>
 
@@ -156,7 +184,7 @@ export default function Dashboard() {
             Active Trades
           </p>
           <p className="text-2xl font-bold" style={{ color: 'var(--casper-text-primary)' }}>
-            3
+            {openTrades.length}
           </p>
         </div>
 
@@ -168,7 +196,7 @@ export default function Dashboard() {
             Risk Level
           </p>
           <p className="text-2xl font-bold" style={{ color: 'var(--casper-blue)' }}>
-            Balanced
+            {settings.strategy}
           </p>
         </div>
       </div>

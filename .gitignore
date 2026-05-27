@@ -1,0 +1,8 @@
+node_modules/
+dist/
+android-sdk/
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store

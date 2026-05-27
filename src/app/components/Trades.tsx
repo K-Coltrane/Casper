@@ -1,13 +1,19 @@
-const trades = [
-  { pair: 'ETH/USDT', buy: '$2,100', sell: '$2,145', profit: '+$45.00', duration: '12m', status: 'CLOSED', positive: true },
-  { pair: 'SOL/USDT', buy: '$138', sell: '$142', profit: '+$4.00', duration: '8m', status: 'CLOSED', positive: true },
-  { pair: 'BTC/USDT', buy: '$41,100', sell: '$40,980', profit: '-$120', duration: '25m', status: 'CLOSED', positive: false },
-  { pair: 'DOGE/USDT', buy: '$0.082', sell: '$0.086', profit: '+$0.004', duration: '15m', status: 'CLOSED', positive: true },
-  { pair: 'MATIC/USDT', buy: '$0.87', sell: '$0.85', profit: '-$0.02', duration: '18m', status: 'CLOSED', positive: false },
-  { pair: 'AVAX/USDT', buy: '$38.50', sell: '$39.20', profit: '+$0.70', duration: '22m', status: 'CLOSED', positive: true },
-];
+import type { Trade } from '../lib/api';
+import { formatCurrency, formatPair } from '../lib/format';
 
-export default function Trades() {
+type TradesProps = {
+  trades: Trade[];
+};
+
+function tradeDuration(trade: Trade) {
+  const end = trade.closedAt ? new Date(trade.closedAt).getTime() : Date.now();
+  const start = new Date(trade.createdAt).getTime();
+  const minutes = Math.max(0, Math.round((end - start) / 60_000));
+
+  return `${minutes}m`;
+}
+
+export default function Trades({ trades }: TradesProps) {
   return (
     <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain">
       {/* FILTERS */}
@@ -45,20 +51,31 @@ export default function Trades() {
 
       {/* TRADE LIST */}
       <div className="px-4 space-y-3 pb-6">
-        {trades.map((trade, idx) => (
+        {trades.length === 0 && (
           <div
-            key={idx}
+            className="rounded-2xl p-4 text-sm"
+            style={{ backgroundColor: 'var(--casper-bg-card)', color: 'var(--casper-text-secondary)' }}
+          >
+            No trades yet. Start the bot or create a test trade from the backend API.
+          </div>
+        )}
+        {trades.map((trade) => {
+          const positive = (trade.pnl ?? 0) >= 0;
+
+          return (
+            <div
+            key={trade.id}
             className="rounded-2xl p-4"
             style={{
               backgroundColor: 'var(--casper-bg-card)',
-              borderLeft: `4px solid ${trade.positive ? 'var(--casper-green)' : 'var(--casper-red)'}`,
+              borderLeft: `4px solid ${positive ? 'var(--casper-green)' : 'var(--casper-red)'}`,
               minHeight: '120px'
             }}
           >
             {/* Header: Pair + Status */}
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-bold" style={{ color: 'var(--casper-text-primary)' }}>
-                {trade.pair}
+                {formatPair(trade.symbol)}
               </h3>
               <span
                 className="px-2 py-1 rounded text-xs font-bold"
@@ -73,14 +90,14 @@ export default function Trades() {
 
             {/* Buy → Sell */}
             <div className="flex items-center gap-2 mb-3 text-sm">
-              <span style={{ color: 'var(--casper-text-dim)' }}>Buy:</span>
+              <span style={{ color: 'var(--casper-text-dim)' }}>Entry:</span>
               <span className="font-bold" style={{ color: 'var(--casper-text-primary)' }}>
-                {trade.buy}
+                {formatCurrency(trade.entryPrice)}
               </span>
               <span style={{ color: 'var(--casper-text-dim)' }}>→</span>
-              <span style={{ color: 'var(--casper-text-dim)' }}>Sell:</span>
+              <span style={{ color: 'var(--casper-text-dim)' }}>Exit:</span>
               <span className="font-bold" style={{ color: 'var(--casper-text-primary)' }}>
-                {trade.sell}
+                {trade.exitPrice ? formatCurrency(trade.exitPrice) : 'Open'}
               </span>
             </div>
 
@@ -88,16 +105,18 @@ export default function Trades() {
             <div className="flex items-center justify-between">
               <span
                 className="text-lg font-bold"
-                style={{ color: trade.positive ? 'var(--casper-green)' : 'var(--casper-red)' }}
+                style={{ color: positive ? 'var(--casper-green)' : 'var(--casper-red)' }}
               >
-                Profit: {trade.profit}
+                P/L: {formatCurrency(trade.pnl ?? 0)}
               </span>
               <div className="text-right text-xs" style={{ color: 'var(--casper-text-dim)' }}>
-                <p>Duration: {trade.duration}</p>
+                <p>Duration: {tradeDuration(trade)}</p>
+                <p>Strategy: {trade.strategy ?? 'balanced'}</p>
               </div>
             </div>
-          </div>
-        ))}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
