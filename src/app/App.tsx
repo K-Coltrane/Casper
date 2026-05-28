@@ -33,6 +33,7 @@ const fallbackPortfolio: Portfolio = {
 };
 
 const fallbackSettings: ApiSettings = {
+  exchange: 'BYBIT',
   maxTradePercent: 0.1,
   dailyLossLimit: 100,
   dailyTarget: 250,
@@ -156,8 +157,11 @@ export default function App() {
   const updateSettings = async (nextSettings: Partial<ApiSettings>) => {
     if (!token) return;
 
+    // Optimistic UI update so toggles/labels change immediately.
+    setSettings((current) => ({ ...current, ...nextSettings }));
+
     const response = await casperApi.updateSettings(token, nextSettings);
-    setSettings(response.settings);
+    setSettings((current) => ({ ...current, ...response.settings }));
     await refreshData(token);
   };
 
