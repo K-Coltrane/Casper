@@ -174,6 +174,16 @@ export const casperApi = {
   async getPairs(token: string) {
     return request<{ pairs: string[] }>('/market/pairs', { token });
   },
+  async getProducts(token: string, params: { search?: string; limit?: number; offset?: number } = {}) {
+    const search = params.search?.trim();
+    const limit = params.limit ?? 60;
+    const offset = params.offset ?? 0;
+    const query = new URLSearchParams();
+    if (search) query.set('search', search);
+    query.set('limit', String(limit));
+    query.set('offset', String(offset));
+    return request<{ products: string[]; total: number }>(`/market/products?${query.toString()}`, { token });
+  },
   async getSettings(token: string) {
     return request<{ settings: Settings }>('/settings', { token });
   },

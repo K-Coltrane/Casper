@@ -32,6 +32,31 @@ export class BybitClient {
       .filter((symbol) => symbol.length > 0);
   }
 
+  async listSpotSymbols(): Promise<string[]> {
+    if (env.MARKET_DATA_MODE === "mock") {
+      return this.listConfiguredPairs();
+    }
+
+    const url = new URL("/v5/market/instruments-info", env.BYBIT_BASE_URL);
+    url.searchParams.set("category", "spot");
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Bybit instruments request failed with ${response.status}`);
+    }
+
+    const body = (await response.json()) as {
+      result?: { list?: Array<{ symbol?: string; status?: string; quoteCoin?: string }> };
+    };
+
+    const symbols = (body.result?.list ?? [])
+      .map((item) => item.symbol)
+      .filter((symbol): symbol is string => Boolean(symbol))
+      .map((symbol) => symbol.toUpperCase());
+
+    return Array.from(new Set(symbols));
+  }
+
   async getTicker(symbol: string): Promise<MarketTicker> {
     if (env.MARKET_DATA_MODE === "mock") {
       return this.getMockTicker(symbol);

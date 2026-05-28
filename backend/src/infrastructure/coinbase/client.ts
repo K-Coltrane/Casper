@@ -68,6 +68,33 @@ export class CoinbaseClient {
       .filter((symbol) => symbol.length > 0);
   }
 
+  async listSpotSymbols(): Promise<string[]> {
+    if (env.MARKET_DATA_MODE === "mock") {
+      return this.listConfiguredPairs();
+    }
+
+    const url = new URL("/api/v3/brokerage/market/products", env.COINBASE_BASE_URL);
+    const response = await fetch(url, { headers: { "cache-control": "no-cache" } });
+    if (!response.ok) {
+      throw new Error(`Coinbase products request failed with ${response.status}`);
+    }
+
+    const body = (await response.json()) as { products?: Array<{ product_id?: string; trading_disabled?: boolean }> };
+    const products = body.products ?? [];
+    const quote = env.COINBASE_QUOTE_CURRENCY;
+
+    const symbols = products
+      .filter((product) => !product.trading_disabled)
+      .map((product) => product.product_id)
+      .filter((productId): productId is string => Boolean(productId))
+      .filter((productId) => productId.endsWith(`-${quote}`))
+      .map((productId) => productId.split("-")[0])
+      .filter((base) => base.length > 0)
+      .map((base) => `${base}USDT`);
+
+    return Array.from(new Set(symbols));
+  }
+
   async getTicker(symbol: string): Promise<MarketTicker> {
     if (env.MARKET_DATA_MODE === "mock") {
       return this.getMockTicker(symbol);

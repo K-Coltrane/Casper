@@ -205,7 +205,7 @@ export default function App() {
           />
         );
       case 'markets':
-        return <Markets markets={markets} apiStatus={apiStatus} />;
+        return <Markets markets={markets} apiStatus={apiStatus} token={token} />;
       case 'trades':
         return <Trades trades={trades} />;
       case 'analytics':
