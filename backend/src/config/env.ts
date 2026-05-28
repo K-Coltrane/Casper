@@ -21,7 +21,10 @@ const envSchema = z.object({
   API_KEY_ENCRYPTION_SECRET: z.string().min(32),
   BYBIT_BASE_URL: z.string().url().default("https://api-testnet.bybit.com"),
   BYBIT_ENABLE_LIVE_TRADING: boolFromString,
-  MARKET_DATA_MODE: z.enum(["mock", "bybit"]).default("mock"),
+  COINBASE_BASE_URL: z.string().url().default("https://api.coinbase.com"),
+  COINBASE_ENABLE_LIVE_TRADING: boolFromString,
+  COINBASE_QUOTE_CURRENCY: z.enum(["USD", "USDC"]).default("USDC"),
+  MARKET_DATA_MODE: z.enum(["mock", "bybit", "coinbase"]).default("mock"),
   TRADING_PAIRS: z.string().default("BTCUSDT,ETHUSDT,SOLUSDT")
 });
 

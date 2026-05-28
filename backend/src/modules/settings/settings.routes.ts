@@ -3,6 +3,7 @@ import { z } from "zod";
 import { sendValidationError } from "../../utils/validation.js";
 
 const updateSettingsSchema = z.object({
+  exchange: z.enum(["BYBIT", "COINBASE"]).optional(),
   maxTradePercent: z.number().positive().max(1).optional(),
   dailyLossLimit: z.number().positive().optional(),
   dailyTarget: z.number().positive().optional(),

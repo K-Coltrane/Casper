@@ -1,6 +1,6 @@
 import { Worker, type Queue } from "bullmq";
 import type { PrismaClient } from "@prisma/client";
-import { bybitClient } from "../infrastructure/bybit/client.js";
+import { getExchangeClient, getUserExchange } from "../infrastructure/exchange/exchange.js";
 import type { RedisConnection } from "../infrastructure/redis/client.js";
 import { queueNames } from "./queues.js";
 import type { MarketJobData, SignalJobData } from "./job.types.js";
@@ -33,14 +33,17 @@ export function createMarketWorker(
         }
       }
 
-      const marketData = await bybitClient.getTicker(job.data.symbol);
+      const exchange = job.data.userId ? await getUserExchange(prisma, job.data.userId) : "BYBIT";
+      const client = getExchangeClient(exchange);
+      const marketData = await client.getTicker(job.data.symbol);
       await prisma.marketSnapshot.create({
         data: {
           symbol: marketData.symbol,
           price: marketData.price,
           volume: marketData.volume,
           volatility: marketData.volatility,
-          changePercent: marketData.changePercent
+          changePercent: marketData.changePercent,
+          source: exchange
         }
       });
 

@@ -82,6 +82,7 @@ model ApiKey {
 model Settings {
   id                 String   @id @default(cuid())
   userId             String   @unique
+  exchange           String   @default("BYBIT")
   maxTradePercent    Float    @default(0.1)
   dailyLossLimit     Float    @default(100)
   dailyTarget        Float    @default(250)

@@ -1,7 +1,7 @@
 import type { PrismaClient } from "@prisma/client";
 import pino from "pino";
 import type { ExecutionJobData } from "../jobs/job.types.js";
-import { bybitClient } from "../infrastructure/bybit/client.js";
+import { getExchangeClient, getUserExchange } from "../infrastructure/exchange/exchange.js";
 import { decryptSecret } from "../utils/crypto.js";
 import { updatePortfolioAfterExecution } from "./portfolio.engine.js";
 
@@ -48,17 +48,16 @@ export async function executeTrade(prisma: PrismaClient, data: ExecutionJobData)
     };
   }
 
+  const exchange = await getUserExchange(prisma, data.userId);
+  const client = getExchangeClient(exchange);
   const apiKey = await prisma.apiKey.findFirst({
-    where: {
-      userId: data.userId,
-      exchange: "BYBIT"
-    },
+    where: { userId: data.userId, exchange },
     orderBy: { createdAt: "desc" }
   });
 
   try {
     const confirmation = await retry(() =>
-      bybitClient.placeMarketOrder({
+      client.placeMarketOrder({
         apiKey: apiKey ? decryptSecret(apiKey.apiKey) : "paper",
         secret: apiKey ? decryptSecret(apiKey.secret) : "paper",
         symbol: data.marketData.symbol,

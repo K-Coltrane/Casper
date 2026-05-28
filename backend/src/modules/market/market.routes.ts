@@ -1,6 +1,6 @@
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
-import { bybitClient } from "../../infrastructure/bybit/client.js";
+import { getExchangeClient, getUserExchange } from "../../infrastructure/exchange/exchange.js";
 import { sendValidationError } from "../../utils/validation.js";
 
 const marketQuerySchema = z.object({
@@ -14,9 +14,11 @@ const marketQuerySchema = z.object({
 });
 
 export const marketRoutes: FastifyPluginAsync = async (app) => {
-  app.get("/pairs", { preHandler: app.authenticate }, async () => ({
-    pairs: bybitClient.listConfiguredPairs()
-  }));
+  app.get("/pairs", { preHandler: app.authenticate }, async (request) => {
+    const exchange = await getUserExchange(app.prisma, request.auth.id);
+    const client = getExchangeClient(exchange);
+    return { pairs: client.listConfiguredPairs() };
+  });
 
   app.get("/", { preHandler: app.authenticate }, async (request, reply) => {
     const parsed = marketQuerySchema.safeParse(request.query);
@@ -24,14 +26,17 @@ export const marketRoutes: FastifyPluginAsync = async (app) => {
       return sendValidationError(reply, parsed.error);
     }
 
-    const ticker = await bybitClient.getTicker(parsed.data.symbol);
+    const exchange = await getUserExchange(app.prisma, request.auth.id);
+    const client = getExchangeClient(exchange);
+    const ticker = await client.getTicker(parsed.data.symbol);
     const snapshot = await app.prisma.marketSnapshot.create({
       data: {
         symbol: ticker.symbol,
         price: ticker.price,
         volume: ticker.volume,
         volatility: ticker.volatility,
-        changePercent: ticker.changePercent
+        changePercent: ticker.changePercent,
+        source: exchange
       }
     });
 

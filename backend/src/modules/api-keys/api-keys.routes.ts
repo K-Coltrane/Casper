@@ -4,7 +4,7 @@ import { encryptSecret } from "../../utils/crypto.js";
 import { sendValidationError } from "../../utils/validation.js";
 
 const upsertApiKeySchema = z.object({
-  exchange: z.enum(["BYBIT"]).default("BYBIT"),
+  exchange: z.enum(["BYBIT", "COINBASE"]).default("BYBIT"),
   apiKey: z.string().min(1),
   secret: z.string().min(1)
 });

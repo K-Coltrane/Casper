@@ -33,3 +33,13 @@ Fastify + TypeScript backend for the Casper trading control panel.
    ```
 
 Live Bybit order placement is disabled unless `BYBIT_ENABLE_LIVE_TRADING=true`; paper confirmations are used by default.
+
+## Coinbase
+
+Coinbase support uses **CDP Advanced Trade** API keys:
+
+- `exchange`: `COINBASE`
+- `apiKey`: key name like `organizations/{org_id}/apiKeys/{key_id}`
+- `secret`: EC private key PEM (`-----BEGIN EC PRIVATE KEY----- ... -----END EC PRIVATE KEY-----`)
+
+Live Coinbase order placement is disabled unless `COINBASE_ENABLE_LIVE_TRADING=true`.

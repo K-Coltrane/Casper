@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { CheckCircle, AlertTriangle } from 'lucide-react';
-import type { BotStatus, Settings as ApiSettings } from '../lib/api';
+import type { ApiKey, BotStatus, ExchangeId, Settings as ApiSettings } from '../lib/api';
 import { formatCurrency } from '../lib/format';
+import { casperApi } from '../lib/api';
 
 type SettingsProps = {
   settings: ApiSettings;
@@ -24,10 +25,41 @@ export default function Settings({
 }: SettingsProps) {
   const isConnected = apiStatus === 'connected';
   const [draftApiBaseUrl, setDraftApiBaseUrl] = useState(apiBaseUrl);
+  const [exchangeApiKey, setExchangeApiKey] = useState('');
+  const [exchangeApiSecret, setExchangeApiSecret] = useState('');
+  const [connectedKeys, setConnectedKeys] = useState<ApiKey[]>([]);
+  const [isSavingKeys, setIsSavingKeys] = useState(false);
+  const [keySaveError, setKeySaveError] = useState<string>();
 
   useEffect(() => {
     setDraftApiBaseUrl(apiBaseUrl);
   }, [apiBaseUrl]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadKeys() {
+      if (apiStatus !== 'connected') return;
+
+      try {
+        const token = localStorage.getItem('casper.accessToken');
+        if (!token) return;
+
+        const response = await casperApi.getApiKeys(token);
+        if (!cancelled) setConnectedKeys(response.apiKeys);
+      } catch {
+        if (!cancelled) setConnectedKeys([]);
+      }
+    }
+
+    void loadKeys();
+    return () => {
+      cancelled = true;
+    };
+  }, [apiStatus]);
+
+  const selectedExchange: ExchangeId = settings.exchange === 'COINBASE' ? 'COINBASE' : 'BYBIT';
+  const isExchangeConnected = connectedKeys.some((key) => key.exchange === selectedExchange);
 
   return (
     <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain px-4 pb-6 space-y-4">
@@ -42,7 +74,7 @@ export default function Settings({
         >
           <div className="flex items-center justify-between">
             <span className="font-semibold" style={{ color: 'var(--casper-text-primary)' }}>
-              Bybit
+              {selectedExchange === 'COINBASE' ? 'Coinbase' : 'Bybit'}
             </span>
             <div className="flex items-center gap-2">
               <span className="text-xs" style={{ color: isConnected ? 'var(--casper-green)' : 'var(--casper-red)' }}>
@@ -52,6 +84,113 @@ export default function Settings({
             </div>
           </div>
         </div>
+
+        <div
+          className="rounded-2xl p-4 space-y-3"
+          style={{ backgroundColor: 'var(--casper-bg-card)' }}
+        >
+          <p className="text-xs" style={{ color: 'var(--casper-text-dim)' }}>
+            Exchange (choose which account Casper trades on)
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => void onUpdate({ exchange: 'BYBIT' })}
+              className="py-3 rounded-xl text-xs font-bold"
+              style={{
+                backgroundColor: selectedExchange === 'BYBIT' ? 'var(--casper-green)' : 'var(--casper-bg-primary)',
+                color: selectedExchange === 'BYBIT' ? '#000' : 'var(--casper-text-secondary)',
+                border: '1px solid var(--casper-border)'
+              }}
+            >
+              Bybit
+            </button>
+            <button
+              onClick={() => void onUpdate({ exchange: 'COINBASE' })}
+              className="py-3 rounded-xl text-xs font-bold"
+              style={{
+                backgroundColor: selectedExchange === 'COINBASE' ? 'var(--casper-green)' : 'var(--casper-bg-primary)',
+                color: selectedExchange === 'COINBASE' ? '#000' : 'var(--casper-text-secondary)',
+                border: '1px solid var(--casper-border)'
+              }}
+            >
+              Coinbase
+            </button>
+          </div>
+          <p className="text-xs" style={{ color: isExchangeConnected ? 'var(--casper-green)' : 'var(--casper-text-dim)' }}>
+            {isExchangeConnected ? 'API keys saved for this exchange' : 'API keys not connected yet'}
+          </p>
+        </div>
+
+        <div
+          className="rounded-2xl p-4 space-y-3"
+          style={{ backgroundColor: 'var(--casper-bg-card)' }}
+        >
+          <p className="text-xs" style={{ color: 'var(--casper-text-dim)' }}>
+            Connect {selectedExchange === 'COINBASE' ? 'Coinbase' : 'Bybit'} (paste API credentials)
+          </p>
+          <input
+            value={exchangeApiKey}
+            onChange={(event) => setExchangeApiKey(event.target.value)}
+            placeholder={selectedExchange === 'COINBASE' ? 'Coinbase API key name' : 'Bybit API key'}
+            className="w-full rounded-xl px-3 py-3 text-xs outline-none"
+            style={{
+              backgroundColor: 'var(--casper-bg-primary)',
+              color: 'var(--casper-text-primary)',
+              border: '1px solid var(--casper-border)'
+            }}
+          />
+          <textarea
+            value={exchangeApiSecret}
+            onChange={(event) => setExchangeApiSecret(event.target.value)}
+            placeholder={selectedExchange === 'COINBASE' ? 'Coinbase API secret (EC private key PEM)' : 'Bybit API secret'}
+            className="w-full rounded-xl px-3 py-3 text-xs outline-none min-h-24"
+            style={{
+              backgroundColor: 'var(--casper-bg-primary)',
+              color: 'var(--casper-text-primary)',
+              border: '1px solid var(--casper-border)'
+            }}
+          />
+          {keySaveError ? (
+            <p className="text-xs" style={{ color: 'var(--casper-red)' }}>
+              {keySaveError}
+            </p>
+          ) : null}
+          <button
+            disabled={!isConnected || isSavingKeys || exchangeApiKey.trim().length === 0 || exchangeApiSecret.trim().length === 0}
+            onClick={async () => {
+              try {
+                setIsSavingKeys(true);
+                setKeySaveError(undefined);
+                const token = localStorage.getItem('casper.accessToken');
+                if (!token) throw new Error('Not authenticated');
+                await casperApi.addApiKey(token, {
+                  exchange: selectedExchange,
+                  apiKey: exchangeApiKey.trim(),
+                  secret: exchangeApiSecret
+                });
+                const refreshed = await casperApi.getApiKeys(token);
+                setConnectedKeys(refreshed.apiKeys);
+                setExchangeApiKey('');
+                setExchangeApiSecret('');
+              } catch (error) {
+                setKeySaveError(error instanceof Error ? error.message : 'Failed to save keys');
+              } finally {
+                setIsSavingKeys(false);
+              }
+            }}
+            className="w-full py-3 rounded-xl font-bold text-sm disabled:opacity-50"
+            style={{
+              backgroundColor: 'var(--casper-green)',
+              color: '#000'
+            }}
+          >
+            {isSavingKeys ? 'SAVING…' : 'SAVE API KEYS'}
+          </button>
+          <p className="text-xs" style={{ color: 'var(--casper-text-dim)' }}>
+            Keys are sent to your backend and stored encrypted. Never paste keys into a frontend-only app.
+          </p>
+        </div>
+
         <div
           className="rounded-2xl p-4 space-y-3"
           style={{ backgroundColor: 'var(--casper-bg-card)' }}

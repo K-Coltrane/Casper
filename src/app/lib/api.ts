@@ -39,6 +39,7 @@ export type Market = {
 };
 
 export type Settings = {
+  exchange?: 'BYBIT' | 'COINBASE';
   maxTradePercent: number;
   dailyLossLimit: number;
   dailyTarget: number;
@@ -51,6 +52,15 @@ export type Settings = {
   maxExposurePercent: number;
   tradeCooldownSecs: number;
   stopLossPercent: number;
+};
+
+export type ExchangeId = 'BYBIT' | 'COINBASE';
+
+export type ApiKey = {
+  id: string;
+  exchange: ExchangeId;
+  createdAt: string;
+  updatedAt?: string;
 };
 
 export type BotStatus = {
@@ -172,6 +182,16 @@ export const casperApi = {
       method: 'PUT',
       token,
       body: settings
+    });
+  },
+  async getApiKeys(token: string) {
+    return request<{ apiKeys: ApiKey[] }>('/api-keys', { token });
+  },
+  async addApiKey(token: string, payload: { exchange: ExchangeId; apiKey: string; secret: string }) {
+    return request<{ apiKey: ApiKey }>('/api-keys', {
+      method: 'POST',
+      token,
+      body: payload
     });
   },
   async getBotStatus(token: string) {

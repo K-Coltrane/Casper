@@ -2,7 +2,7 @@ import websocket from "@fastify/websocket";
 import type { FastifyInstance } from "fastify";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
-import { bybitClient } from "../infrastructure/bybit/client.js";
+import { getExchangeClient, getUserExchange } from "../infrastructure/exchange/exchange.js";
 import { verifyAccessToken } from "../utils/jwt.js";
 
 const streamQuerySchema = z.object({
@@ -26,13 +26,16 @@ export async function registerMarketStream(app: FastifyInstance) {
     const headerToken = authorization?.startsWith("Bearer ") ? authorization.slice(7) : undefined;
     const token = parsed.success ? (parsed.data.token ?? headerToken) : headerToken;
 
+    let userId: string | undefined;
+
     try {
       if (!token) {
         socket.close(1008, "Missing token");
         return;
       }
 
-      verifyAccessToken(token);
+      const payload = verifyAccessToken(token);
+      userId = payload.sub;
     } catch (error) {
       if (error instanceof jwt.JsonWebTokenError) {
         socket.close(1008, "Invalid token");
@@ -44,7 +47,9 @@ export async function registerMarketStream(app: FastifyInstance) {
 
     const sendTicker = async () => {
       try {
-        const ticker = await bybitClient.getTicker(symbol);
+        const exchange = userId ? await getUserExchange(app.prisma, userId) : "BYBIT";
+        const client = getExchangeClient(exchange);
+        const ticker = await client.getTicker(symbol);
         socket.send(JSON.stringify(ticker));
       } catch (error) {
         app.log.error({ err: error, symbol }, "market websocket tick failed");
