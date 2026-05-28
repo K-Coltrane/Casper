@@ -1,14 +1,26 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { CheckCircle, AlertTriangle } from 'lucide-react';
 import type { ApiKey, BotStatus, ExchangeId, Settings as ApiSettings } from '../lib/api';
 import { formatCurrency } from '../lib/format';
 import { casperApi } from '../lib/api';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger
+} from './ui/alert-dialog';
 
 type SettingsProps = {
   settings: ApiSettings;
   botStatus: BotStatus;
   apiStatus: 'connecting' | 'connected' | 'offline';
   apiBaseUrl: string;
+  apiKeys: ApiKey[];
   onUpdate: (settings: Partial<ApiSettings>) => void | Promise<void>;
   onApiBaseUrlChange: (apiBaseUrl: string) => void;
   onEmergencyStop: () => void;
@@ -19,6 +31,7 @@ export default function Settings({
   botStatus,
   apiStatus,
   apiBaseUrl,
+  apiKeys,
   onUpdate,
   onApiBaseUrlChange,
   onEmergencyStop
@@ -27,7 +40,6 @@ export default function Settings({
   const [draftApiBaseUrl, setDraftApiBaseUrl] = useState(apiBaseUrl);
   const [exchangeApiKey, setExchangeApiKey] = useState('');
   const [exchangeApiSecret, setExchangeApiSecret] = useState('');
-  const [connectedKeys, setConnectedKeys] = useState<ApiKey[]>([]);
   const [isSavingKeys, setIsSavingKeys] = useState(false);
   const [keySaveError, setKeySaveError] = useState<string>();
 
@@ -35,31 +47,8 @@ export default function Settings({
     setDraftApiBaseUrl(apiBaseUrl);
   }, [apiBaseUrl]);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadKeys() {
-      if (apiStatus !== 'connected') return;
-
-      try {
-        const token = localStorage.getItem('casper.accessToken');
-        if (!token) return;
-
-        const response = await casperApi.getApiKeys(token);
-        if (!cancelled) setConnectedKeys(response.apiKeys);
-      } catch {
-        if (!cancelled) setConnectedKeys([]);
-      }
-    }
-
-    void loadKeys();
-    return () => {
-      cancelled = true;
-    };
-  }, [apiStatus]);
-
   const selectedExchange: ExchangeId = settings.exchange === 'COINBASE' ? 'COINBASE' : 'BYBIT';
-  const isExchangeConnected = connectedKeys.some((key) => key.exchange === selectedExchange);
+  const isExchangeConnected = useMemo(() => apiKeys.some((key) => key.exchange === selectedExchange), [apiKeys, selectedExchange]);
 
   return (
     <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain px-4 pb-6 space-y-4">
@@ -168,8 +157,7 @@ export default function Settings({
                   apiKey: exchangeApiKey.trim(),
                   secret: exchangeApiSecret
                 });
-                const refreshed = await casperApi.getApiKeys(token);
-                setConnectedKeys(refreshed.apiKeys);
+                // App refresh loop will pick up new keys shortly.
                 setExchangeApiKey('');
                 setExchangeApiSecret('');
               } catch (error) {
@@ -392,18 +380,33 @@ export default function Settings({
         <h3 className="font-bold text-sm" style={{ color: 'var(--casper-text-primary)' }}>
           🛑 KILL SWITCH
         </h3>
-        <button
-          onClick={onEmergencyStop}
-          className="w-full py-4 rounded-2xl font-bold flex items-center justify-center gap-2 animate-pulse"
-          style={{
-            backgroundColor: 'var(--casper-red)',
-            color: 'var(--casper-text-primary)',
-            boxShadow: '0 6px 20px rgba(255, 59, 59, 0.4)'
-          }}
-        >
-          <AlertTriangle className="w-5 h-5" />
-          STOP ALL TRADING
-        </button>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <button
+              className="w-full py-4 rounded-2xl font-bold flex items-center justify-center gap-2 animate-pulse"
+              style={{
+                backgroundColor: 'var(--casper-red)',
+                color: 'var(--casper-text-primary)',
+                boxShadow: '0 6px 20px rgba(255, 59, 59, 0.4)'
+              }}
+            >
+              <AlertTriangle className="w-5 h-5" />
+              STOP ALL TRADING
+            </button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Stop all trading?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This triggers the global emergency stop immediately. You can resume later from the backend.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={onEmergencyStop}>Yes, stop</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
         <p className="text-xs text-center" style={{ color: 'var(--casper-text-dim)' }}>
           Immediately stops all trading activity. Current global state:{' '}
           {botStatus.global.emergencyStopped ? 'emergency stopped' : 'armed'}

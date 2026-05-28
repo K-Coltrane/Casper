@@ -1,3 +1,4 @@
+import { useMemo, useState } from 'react';
 import type { Trade } from '../lib/api';
 import { formatCurrency, formatPair } from '../lib/format';
 
@@ -14,6 +15,24 @@ function tradeDuration(trade: Trade) {
 }
 
 export default function Trades({ trades }: TradesProps) {
+  const [activeRange, setActiveRange] = useState<'today' | '7d' | 'all'>('today');
+
+  const visibleTrades = useMemo(() => {
+    if (activeRange === 'all') return trades;
+
+    const now = new Date();
+    const start = new Date(now);
+
+    if (activeRange === 'today') {
+      start.setHours(0, 0, 0, 0);
+    } else {
+      start.setDate(start.getDate() - 7);
+    }
+
+    const startMs = start.getTime();
+    return trades.filter((trade) => new Date(trade.createdAt).getTime() >= startMs);
+  }, [activeRange, trades]);
+
   return (
     <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain">
       {/* FILTERS */}
@@ -22,27 +41,30 @@ export default function Trades({ trades }: TradesProps) {
           <button
             className="px-4 py-2 rounded-xl text-xs font-bold"
             style={{
-              backgroundColor: 'var(--casper-green)',
-              color: '#000'
+              backgroundColor: activeRange === 'today' ? 'var(--casper-green)' : 'var(--casper-bg-card)',
+              color: activeRange === 'today' ? '#000' : 'var(--casper-text-secondary)'
             }}
+            onClick={() => setActiveRange('today')}
           >
             Today
           </button>
           <button
             className="px-4 py-2 rounded-xl text-xs font-medium"
             style={{
-              backgroundColor: 'var(--casper-bg-card)',
-              color: 'var(--casper-text-secondary)'
+              backgroundColor: activeRange === '7d' ? 'var(--casper-green)' : 'var(--casper-bg-card)',
+              color: activeRange === '7d' ? '#000' : 'var(--casper-text-secondary)'
             }}
+            onClick={() => setActiveRange('7d')}
           >
             7 Days
           </button>
           <button
             className="px-4 py-2 rounded-xl text-xs font-medium"
             style={{
-              backgroundColor: 'var(--casper-bg-card)',
-              color: 'var(--casper-text-secondary)'
+              backgroundColor: activeRange === 'all' ? 'var(--casper-green)' : 'var(--casper-bg-card)',
+              color: activeRange === 'all' ? '#000' : 'var(--casper-text-secondary)'
             }}
+            onClick={() => setActiveRange('all')}
           >
             All
           </button>
@@ -51,7 +73,7 @@ export default function Trades({ trades }: TradesProps) {
 
       {/* TRADE LIST */}
       <div className="px-4 space-y-3 pb-6">
-        {trades.length === 0 && (
+        {visibleTrades.length === 0 && (
           <div
             className="rounded-2xl p-4 text-sm"
             style={{ backgroundColor: 'var(--casper-bg-card)', color: 'var(--casper-text-secondary)' }}
@@ -59,7 +81,7 @@ export default function Trades({ trades }: TradesProps) {
             No trades yet. Start the bot or create a test trade from the backend API.
           </div>
         )}
-        {trades.map((trade) => {
+        {visibleTrades.map((trade) => {
           const positive = (trade.pnl ?? 0) >= 0;
 
           return (

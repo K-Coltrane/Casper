@@ -11,6 +11,7 @@ import {
   getApiBaseUrl,
   resetApiSession,
   setApiBaseUrl,
+  type ApiKey,
   type BotStatus,
   type Market,
   type Portfolio,
@@ -67,26 +68,30 @@ export default function App() {
   const [botStatus, setBotStatus] = useState<BotStatus>(fallbackBotStatus);
   const [trades, setTrades] = useState<Trade[]>([]);
   const [markets, setMarkets] = useState<Market[]>([]);
+  const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
   const [apiBaseUrl, setApiBaseUrlState] = useState(getApiBaseUrl());
   const [apiStatus, setApiStatus] = useState<'connecting' | 'connected' | 'offline'>('connecting');
   const isRunning = botStatus.global.enabled && botStatus.user.botEnabled && !botStatus.global.emergencyStopped;
 
   const refreshData = useCallback(async (activeToken: string) => {
-    const [portfolioResponse, tradesResponse, settingsResponse, botResponse, pairsResponse] = await Promise.all([
+    const [portfolioResponse, tradesResponse, settingsResponse, botResponse, pairsResponse, apiKeysResponse] =
+      await Promise.all([
       casperApi.getPortfolio(activeToken),
       casperApi.getTrades(activeToken),
       casperApi.getSettings(activeToken),
       casperApi.getBotStatus(activeToken),
-      casperApi.getPairs(activeToken)
+      casperApi.getPairs(activeToken),
+      casperApi.getApiKeys(activeToken)
     ]);
     const marketResponses = await Promise.all(
-      pairsResponse.pairs.slice(0, 8).map((symbol) => casperApi.getMarket(activeToken, symbol))
+      pairsResponse.pairs.slice(0, 12).map((symbol) => casperApi.getMarket(activeToken, symbol))
     );
 
     setPortfolio(portfolioResponse.portfolio);
     setTrades(tradesResponse.trades);
     setSettings(settingsResponse.settings);
     setBotStatus(botResponse);
+    setApiKeys(apiKeysResponse.apiKeys);
     setMarkets(marketResponses.map((response) => response.market));
     setApiStatus('connected');
   }, []);
@@ -165,6 +170,7 @@ export default function App() {
     setBotStatus(fallbackBotStatus);
     setTrades([]);
     setMarkets([]);
+    setApiKeys([]);
     setApiStatus('connecting');
     setApiBaseUrlState(getApiBaseUrl());
   };
@@ -187,6 +193,8 @@ export default function App() {
             settings={settings}
             trades={trades}
             apiStatus={apiStatus}
+            apiKeys={apiKeys}
+            onRequireConnect={() => setActiveTab('settings')}
             onStart={() => void runBotAction('start')}
             onStop={() => void runBotAction('stop')}
             onEmergencyStop={() => void runBotAction('emergency-stop')}
@@ -205,6 +213,7 @@ export default function App() {
             botStatus={botStatus}
             apiStatus={apiStatus}
             apiBaseUrl={apiBaseUrl}
+            apiKeys={apiKeys}
             onUpdate={updateSettings}
             onApiBaseUrlChange={updateApiBaseUrl}
             onEmergencyStop={() => void runBotAction('emergency-stop')}

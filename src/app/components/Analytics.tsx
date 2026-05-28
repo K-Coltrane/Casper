@@ -1,4 +1,5 @@
-import { LineChart, Line, ResponsiveContainer } from 'recharts';
+import { useMemo, useState } from 'react';
+import { Brush, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { Portfolio, Trade } from '../lib/api';
 import { formatCurrency } from '../lib/format';
 
@@ -8,7 +9,21 @@ type AnalyticsProps = {
 };
 
 export default function Analytics({ portfolio, trades }: AnalyticsProps) {
-  const closedTrades = trades.filter((trade) => trade.status === 'CLOSED');
+  const [activePeriod, setActivePeriod] = useState<'1D' | '7D' | '30D'>('7D');
+
+  const periodCutoffMs = useMemo(() => {
+    const now = Date.now();
+    if (activePeriod === '1D') return now - 1 * 24 * 60 * 60_000;
+    if (activePeriod === '7D') return now - 7 * 24 * 60 * 60_000;
+    return now - 30 * 24 * 60 * 60_000;
+  }, [activePeriod]);
+
+  const periodTrades = useMemo(
+    () => trades.filter((trade) => new Date(trade.createdAt).getTime() >= periodCutoffMs),
+    [periodCutoffMs, trades]
+  );
+
+  const closedTrades = periodTrades.filter((trade) => trade.status === 'CLOSED');
   const winningTrades = closedTrades.filter((trade) => (trade.pnl ?? 0) > 0);
   const winRate = closedTrades.length > 0 ? Math.round((winningTrades.length / closedTrades.length) * 100) : 0;
   const averageGain =
@@ -16,25 +31,36 @@ export default function Analytics({ portfolio, trades }: AnalyticsProps) {
       ? winningTrades.reduce((total, trade) => total + (trade.pnl ?? 0), 0) / winningTrades.length
       : 0;
   const maxDrawdown = portfolio.balance > 0 ? (Math.min(portfolio.totalPnL, 0) / portfolio.balance) * 100 : 0;
-  const chartData =
-    closedTrades.length > 0
-      ? closedTrades.slice(-8).map((trade, index) => ({
-          value: closedTrades.slice(0, index + 1).reduce((total, item) => total + (item.pnl ?? 0), 0)
-        }))
-      : [{ value: 0 }, { value: portfolio.totalPnL }];
+  const chartData = useMemo(() => {
+    if (closedTrades.length === 0) {
+      return [
+        { idx: 0, value: 0 },
+        { idx: 1, value: portfolio.totalPnL }
+      ];
+    }
+
+    let running = 0;
+    return closedTrades
+      .slice(-50)
+      .map((trade, idx) => {
+        running += trade.pnl ?? 0;
+        return { idx, value: running };
+      });
+  }, [closedTrades, portfolio.totalPnL]);
 
   return (
     <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain px-4 pb-6 space-y-4">
       {/* TIME FILTERS */}
       <div className="flex items-center gap-2">
-        {['1D', '7D', '30D'].map((period, idx) => (
+        {(['1D', '7D', '30D'] as const).map((period) => (
           <button
             key={period}
             className="px-4 py-2 rounded-xl text-xs font-bold"
             style={{
-              backgroundColor: idx === 1 ? 'var(--casper-green)' : 'var(--casper-bg-card)',
-              color: idx === 1 ? '#000' : 'var(--casper-text-secondary)'
+              backgroundColor: activePeriod === period ? 'var(--casper-green)' : 'var(--casper-bg-card)',
+              color: activePeriod === period ? '#000' : 'var(--casper-text-secondary)'
             }}
+            onClick={() => setActivePeriod(period)}
           >
             {period}
           </button>
@@ -47,13 +73,25 @@ export default function Analytics({ portfolio, trades }: AnalyticsProps) {
         style={{ backgroundColor: 'var(--casper-bg-card)' }}
       >
         <p className="text-xs mb-2" style={{ color: 'var(--casper-text-dim)' }}>
-          Profit Growth (7 Days)
+          Profit Growth ({activePeriod})
         </p>
 
         {/* Chart */}
         <div className="h-48">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData}>
+              <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
+              <XAxis dataKey="idx" hide />
+              <YAxis hide domain={['auto', 'auto']} />
+              <Tooltip
+                formatter={(value) => [formatCurrency(Number(value)), 'PnL']}
+                labelFormatter={() => ''}
+                contentStyle={{
+                  backgroundColor: 'rgba(0,0,0,0.7)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: 12
+                }}
+              />
               <Line
                 type="monotone"
                 dataKey="value"
@@ -61,6 +99,9 @@ export default function Analytics({ portfolio, trades }: AnalyticsProps) {
                 strokeWidth={3}
                 dot={false}
               />
+              {chartData.length > 10 ? (
+                <Brush dataKey="idx" height={18} travellerWidth={10} stroke="var(--casper-green)" />
+              ) : null}
             </LineChart>
           </ResponsiveContainer>
         </div>

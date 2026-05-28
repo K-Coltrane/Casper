@@ -1,6 +1,17 @@
+import { useMemo, useState } from 'react';
 import { Play, Square, AlertTriangle } from 'lucide-react';
-import type { Portfolio, Settings, Trade } from '../lib/api';
+import type { ApiKey, ExchangeId, Portfolio, Settings, Trade } from '../lib/api';
 import { formatCurrency } from '../lib/format';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
+} from './ui/alert-dialog';
 
 type DashboardProps = {
   isRunning: boolean;
@@ -8,6 +19,8 @@ type DashboardProps = {
   settings: Settings;
   trades: Trade[];
   apiStatus: 'connecting' | 'connected' | 'offline';
+  apiKeys: ApiKey[];
+  onRequireConnect: () => void;
   onStart: () => void;
   onStop: () => void;
   onEmergencyStop: () => void;
@@ -19,10 +32,20 @@ export default function Dashboard({
   settings,
   trades,
   apiStatus,
+  apiKeys,
+  onRequireConnect,
   onStart,
   onStop,
   onEmergencyStop
 }: DashboardProps) {
+  const [showConnectDialog, setShowConnectDialog] = useState(false);
+
+  const selectedExchange: ExchangeId = settings.exchange === 'COINBASE' ? 'COINBASE' : 'BYBIT';
+  const isExchangeConnected = useMemo(
+    () => apiKeys.some((key) => key.exchange === selectedExchange),
+    [apiKeys, selectedExchange]
+  );
+
   const openTrades = trades.filter((trade) => trade.status === 'OPEN');
   const closedTrades = trades.filter((trade) => trade.status === 'CLOSED');
   const winningTrades = closedTrades.filter((trade) => (trade.pnl ?? 0) > 0);
@@ -84,7 +107,13 @@ export default function Dashboard({
         {/* START / STOP Buttons */}
         <div className="grid grid-cols-2 gap-3">
           <button
-            onClick={onStart}
+            onClick={() => {
+              if (!isExchangeConnected) {
+                setShowConnectDialog(true);
+                return;
+              }
+              onStart();
+            }}
             className="py-4 rounded-xl font-bold transition-all"
             style={{
               backgroundColor: 'var(--casper-green)',
@@ -109,7 +138,13 @@ export default function Dashboard({
 
         {/* EMERGENCY KILL SWITCH */}
         <button
-          onClick={onEmergencyStop}
+          onClick={() => {
+            if (!isExchangeConnected) {
+              setShowConnectDialog(true);
+              return;
+            }
+            onEmergencyStop();
+          }}
           className="w-full py-4 rounded-xl font-bold flex items-center justify-center gap-2 animate-pulse"
           style={{
             backgroundColor: 'var(--casper-red)',
@@ -121,6 +156,28 @@ export default function Dashboard({
           EMERGENCY KILL SWITCH
         </button>
       </div>
+
+      <AlertDialog open={showConnectDialog} onOpenChange={setShowConnectDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Connect your exchange first</AlertDialogTitle>
+            <AlertDialogDescription>
+              To start Casper, connect an exchange account (Bybit or Coinbase) in Settings by saving API keys.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setShowConnectDialog(false);
+                onRequireConnect();
+              }}
+            >
+              Go to Settings
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* LIVE ACTIVITY FEED */}
       <div

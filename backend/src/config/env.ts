@@ -25,7 +25,7 @@ const envSchema = z.object({
   COINBASE_ENABLE_LIVE_TRADING: boolFromString,
   COINBASE_QUOTE_CURRENCY: z.enum(["USD", "USDC"]).default("USDC"),
   MARKET_DATA_MODE: z.enum(["mock", "bybit", "coinbase"]).default("mock"),
-  TRADING_PAIRS: z.string().default("BTCUSDT,ETHUSDT,SOLUSDT")
+  TRADING_PAIRS: z.string().default("BTCUSDT,ETHUSDT,SOLUSDT,DOGEUSDT,ADAUSDT,MATICUSDT,AVAXUSDT,DOTUSDT")
 });
 
 export const env = envSchema.parse(process.env);
